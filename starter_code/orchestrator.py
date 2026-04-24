@@ -8,7 +8,6 @@ RAW_DATA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), "raw_data")
 
 
 # Import role-specific modules
-from schema import UnifiedDocument
 from process_pdf import extract_pdf_data
 from process_transcript import clean_transcript
 from process_html import parse_html_catalog
@@ -35,14 +34,57 @@ def main():
     output_path = os.path.join(os.path.dirname(SCRIPT_DIR), "processed_knowledge_base.json")
     # ----------------------------------------------
 
-    # TODO: Call each processing function (extract_pdf_data, clean_transcript, etc.)
-    # TODO: Run quality gates (run_quality_gate) before adding to final_kb
-    # TODO: Save final_kb to output_path using json.dump
-    
-    # Example:
-    # doc = extract_pdf_data(pdf_path)
-    # if doc and run_quality_gate(doc):
-    #     final_kb.append(doc)
+    # --- PDF (Gemini API) ---
+    print("Processing PDF...")
+    try:
+        pdf_doc = extract_pdf_data(pdf_path)
+        if pdf_doc and run_quality_gate(pdf_doc):
+            final_kb.append(pdf_doc)
+    except Exception as e:
+        print(f"  [ERROR] PDF processing failed: {e}")
+
+    # --- Transcript ---
+    print("Processing Transcript...")
+    try:
+        trans_doc = clean_transcript(trans_path)
+        if trans_doc and run_quality_gate(trans_doc):
+            final_kb.append(trans_doc)
+    except Exception as e:
+        print(f"  [ERROR] Transcript processing failed: {e}")
+
+    # --- HTML ---
+    print("Processing HTML...")
+    try:
+        html_docs = parse_html_catalog(html_path)
+        for doc in html_docs:
+            if run_quality_gate(doc):
+                final_kb.append(doc)
+    except Exception as e:
+        print(f"  [ERROR] HTML processing failed: {e}")
+
+    # --- CSV ---
+    print("Processing CSV...")
+    try:
+        csv_docs = process_sales_csv(csv_path)
+        for doc in csv_docs:
+            if run_quality_gate(doc):
+                final_kb.append(doc)
+    except Exception as e:
+        print(f"  [ERROR] CSV processing failed: {e}")
+
+    # --- Legacy Code ---
+    print("Processing Legacy Code...")
+    try:
+        code_doc = extract_logic_from_code(code_path)
+        if code_doc and run_quality_gate(code_doc):
+            final_kb.append(code_doc)
+    except Exception as e:
+        print(f"  [ERROR] Legacy code processing failed: {e}")
+
+    # Save to JSON
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(final_kb, f, ensure_ascii=False, indent=2, default=str)
+    print(f"\nOutput saved to: {output_path}")
 
     end_time = time.time()
     print(f"Pipeline finished in {end_time - start_time:.2f} seconds.")
